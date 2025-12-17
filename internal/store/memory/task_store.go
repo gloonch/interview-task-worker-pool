@@ -76,20 +76,17 @@ func (ts *TaskStore) Fail(id int64, reason string) (domain.Task, error) {
 	return task, nil
 }
 
-//func (ts *TaskStore) UpdateStatus(id int64, status domain.TaskStatus) error {
-//	if id <= 0 {
-//		return ErrInvalidTaskID
-//	}
-//
-//	ts.mu.Lock()
-//	defer ts.mu.Unlock()
-//
-//	task, ok := ts.tasks[id]
-//	if !ok {
-//		return ErrNotFound
-//	}
-//
-//	switch status {
-//	case domain.StatusRunning:
-//	}
-//}
+func (ts *TaskStore) UpdateStatus(id int64, status domain.TaskStatus) (domain.Task, error) {
+
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
+	task, ok := ts.tasks[id]
+	if !ok {
+		return domain.Task{}, ErrNotFound
+	}
+	task.Status = status
+	ts.tasks[id] = task
+
+	return task, nil
+}

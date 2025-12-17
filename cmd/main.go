@@ -24,9 +24,10 @@ func main() {
 
 	store := memory.New()
 
-	pool := workerpool.New(cfg.PoolSize)
+	pool := workerpool.New(cfg.PoolSize, store)
+	pool.Start(cfg.Workers)
 
-	service, err := service.New(store, pool)
+	service, err := service.New(store, pool) // pool implements workerpool.TaskPool
 	if err != nil {
 		log.Fatalf("service initiation failed: %v", err)
 	}
@@ -57,8 +58,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
+	// 1) stop accepting new HTTP requests
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown failed: %v", err)
+		log.Fatalf("server shutdown failed: %v", err)
+	}
+
+	// 2) drain workers (get pending tasks finished)
+	if err := pool.Shutdown(ctx); err != nil {
+		log.Fatalf("pool shutdown failed: %v", err)
 	}
 
 	log.Printf("shut down gracefully")

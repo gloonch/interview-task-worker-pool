@@ -15,7 +15,7 @@ func New() Config {
 	return Config{
 		HTTPPort:        ":8080",
 		Workers:         5,
-		PoolSize:        10,
+		PoolSize:        100,
 		ShutdownTimeout: time.Second * 10,
 	}
 }

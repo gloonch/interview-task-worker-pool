@@ -16,6 +16,10 @@ type TaskStore interface {
 	Fail(id int64, reason string) (domain.Task, error)
 }
 
+type TaskPool interface {
+	Enqueue(id int64) error
+}
+
 type TaskService struct {
 	store TaskStore
 	pool  workerpool.TaskPool
@@ -63,6 +67,14 @@ func (s *TaskService) CreateTask(title, description string) (domain.Task, error)
 			}
 			return failedTask, workerpool.ErrPoolFull
 		}
+		if errors.Is(err, workerpool.ErrPoolClosed) {
+			failedTask, fErr := s.store.Fail(created.ID, workerpool.ErrPoolClosed.Error())
+			if fErr != nil {
+				return domain.Task{}, fErr
+			}
+			return failedTask, workerpool.ErrPoolClosed
+		}
+		return domain.Task{}, err
 	}
 	return created, nil
 }

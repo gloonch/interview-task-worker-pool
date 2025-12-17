@@ -6,6 +6,7 @@ import (
 	"interview-task-worker-pool/internal/domain"
 	"interview-task-worker-pool/internal/http/dto"
 	"interview-task-worker-pool/internal/service"
+	"interview-task-worker-pool/internal/workerpool"
 	"net/http"
 	"strconv"
 )
@@ -35,14 +36,32 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	task, err := h.taskService.CreateTask(req.Title, req.Description)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidInput) {
+		switch {
+		case errors.Is(err, service.ErrInvalidInput):
 			writeError(w, http.StatusBadRequest, service.ErrInvalidInput.Error())
-
+			return
+		case errors.Is(err, workerpool.ErrPoolFull):
+			writeJSON(w, http.StatusServiceUnavailable, dto.TaskResponse{
+				ID:          task.ID,
+				Title:       task.Title,
+				Description: task.Description,
+				Status:      string(task.Status),
+				Error:       task.Error,
+			})
+			return
+		case errors.Is(err, workerpool.ErrPoolClosed):
+			writeJSON(w, http.StatusServiceUnavailable, dto.TaskResponse{
+				ID:          task.ID,
+				Title:       task.Title,
+				Description: task.Description,
+				Status:      string(task.Status),
+				Error:       task.Error,
+			})
+			return
+		default:
+			writeError(w, http.StatusInternalServerError, "internal server error")
 			return
 		}
-		writeError(w, http.StatusServiceUnavailable, err.Error())
-
-		return
 	}
 
 	response := dto.TaskResponse{
