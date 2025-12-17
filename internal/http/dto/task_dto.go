@@ -10,6 +10,7 @@ type TaskResponse struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Status      string `json:"status"`
+	Error       string `json:"error,omitempty"`
 }
 
 type TaskSummaryResponse struct {

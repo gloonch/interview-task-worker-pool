@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	ErrNotInitialized = errors.New("task store not initialized")
+	ErrNotFound      = errors.New("task not found")
+	ErrInvalidTaskID = errors.New("invalid task id")
 )
 
 type TaskStore struct {
@@ -52,10 +53,6 @@ func (ts *TaskStore) List() ([]domain.Task, error) {
 	ts.mu.RLock()
 	defer ts.mu.RUnlock()
 
-	if ts.tasks == nil {
-		return nil, ErrNotInitialized
-	}
-
 	tasks := make([]domain.Task, 0, len(ts.tasks))
 	for _, t := range ts.tasks {
 		tasks = append(tasks, t)
@@ -63,3 +60,36 @@ func (ts *TaskStore) List() ([]domain.Task, error) {
 
 	return tasks, nil
 }
+
+func (ts *TaskStore) Fail(id int64, reason string) (domain.Task, error) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
+	task, ok := ts.tasks[id]
+	if !ok {
+		return domain.Task{}, ErrNotFound
+	}
+
+	task.Status = domain.StatusFailed
+	task.Error = reason
+	ts.tasks[id] = task
+	return task, nil
+}
+
+//func (ts *TaskStore) UpdateStatus(id int64, status domain.TaskStatus) error {
+//	if id <= 0 {
+//		return ErrInvalidTaskID
+//	}
+//
+//	ts.mu.Lock()
+//	defer ts.mu.Unlock()
+//
+//	task, ok := ts.tasks[id]
+//	if !ok {
+//		return ErrNotFound
+//	}
+//
+//	switch status {
+//	case domain.StatusRunning:
+//	}
+//}

@@ -40,7 +40,7 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed creating task")
+		writeError(w, http.StatusServiceUnavailable, err.Error())
 
 		return
 	}
@@ -50,6 +50,7 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Title:       task.Title,
 		Description: task.Description,
 		Status:      string(task.Status),
+		Error:       task.Error,
 	}
 
 	writeJSON(w, http.StatusCreated, response)
@@ -85,6 +86,7 @@ func (h *TaskHandler) Get(w http.ResponseWriter, r *http.Request) {
 		Title:       task.Title,
 		Description: task.Description,
 		Status:      string(task.Status),
+		Error:       task.Error,
 	}
 
 	writeJSON(w, http.StatusOK, response)

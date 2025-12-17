@@ -1,26 +1,35 @@
 package service
 
 import (
+	"errors"
 	"interview-task-worker-pool/internal/domain"
+	"interview-task-worker-pool/internal/workerpool"
+	"math/rand"
 	"strings"
+	"time"
 )
 
 type TaskStore interface {
 	Create(task domain.Task) (domain.Task, error)
 	Get(id int64) (domain.Task, bool)
 	List() ([]domain.Task, error)
+	Fail(id int64, reason string) (domain.Task, error)
 }
 
 type TaskService struct {
 	store TaskStore
+	pool  workerpool.TaskPool
 }
 
-func New(store TaskStore) (*TaskService, error) {
+func New(store TaskStore, pool workerpool.TaskPool) (*TaskService, error) {
 	if store == nil {
 		return nil, ErrStoreNil
 	}
+	if pool == nil {
+		return nil, ErrPoolNil
+	}
 
-	return &TaskService{store: store}, nil
+	return &TaskService{store: store, pool: pool}, nil
 }
 
 func (s *TaskService) CreateTask(title, description string) (domain.Task, error) {
@@ -33,11 +42,29 @@ func (s *TaskService) CreateTask(title, description string) (domain.Task, error)
 	}
 
 	task := domain.Task{
-		Title:       title,
-		Description: description,
+		Title:        title,
+		Description:  description,
+		CreatedAt:    time.Now(),
+		WorkDuration: time.Duration(rand.Intn(5)+1) * time.Second,
 	}
 
-	return s.store.Create(task)
+	created, err := s.store.Create(task)
+	if err != nil {
+		return domain.Task{}, err
+	}
+
+	// Enqueue (non-blocking)
+	if err := s.pool.Enqueue(created.ID); err != nil {
+		// pool overflow ~> mark task failed and attach reason
+		if errors.Is(err, workerpool.ErrPoolFull) {
+			failedTask, fErr := s.store.Fail(created.ID, workerpool.ErrPoolFull.Error())
+			if fErr != nil {
+				return domain.Task{}, fErr
+			}
+			return failedTask, workerpool.ErrPoolFull
+		}
+	}
+	return created, nil
 }
 
 func (s *TaskService) GetTask(id int64) (domain.Task, error) {

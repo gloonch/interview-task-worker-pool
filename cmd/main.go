@@ -7,19 +7,26 @@ import (
 	"interview-task-worker-pool/internal/http/handlers"
 	"interview-task-worker-pool/internal/service"
 	"interview-task-worker-pool/internal/store/memory"
+	"interview-task-worker-pool/internal/workerpool"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano()) // seed one time, for multiple usage
+
 	cfg := config.New()
 
 	store := memory.New()
 
-	service, err := service.New(store)
+	pool := workerpool.New(cfg.PoolSize)
+
+	service, err := service.New(store, pool)
 	if err != nil {
 		log.Fatalf("service initiation failed: %v", err)
 	}

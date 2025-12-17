@@ -15,11 +15,10 @@ type Task struct {
 	ID          int64
 	Title       string
 	Description string
+	Error       string
 
-	Status     TaskStatus
-	CreatedAt  time.Time
-	StartedAt  time.Time
-	FinishedAt time.Time
+	Status TaskStatus
 
-	Error string
+	CreatedAt    time.Time
+	WorkDuration time.Duration // internal simulation (e.g. 1-5s)
 }
